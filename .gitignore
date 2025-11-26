@@ -4,9 +4,9 @@
 # Slidev output
 dist/
 .slidev/
-*.pdf
-*.pptx
-*.png
+*-export.pdf
+*-export.png
+*-export.pptx
 
 # Node modules (if installed locally)
 node_modules/

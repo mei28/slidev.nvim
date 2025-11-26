@@ -1,52 +1,52 @@
--- config.lua: 設定管理モジュール
+-- config.lua: Configuration management module
 
 local M = {}
 
--- デフォルト設定
+-- Default configuration
 M.defaults = {
-  -- Slidev CLIコマンドのパス（nilの場合は自動検出）
+  -- Path to Slidev CLI command (nil for auto-detect)
   slidev_command = nil,
 
-  -- 開発サーバーのデフォルトポート
+  -- Default port for dev server
   port = 3030,
 
-  -- ブラウザ自動起動の有効化
+  -- Enable automatic browser opening
   auto_open_browser = true,
 
-  -- 使用するブラウザ（nilの場合はシステムデフォルト）
+  -- Browser to use (nil for system default)
   browser = nil,
 
-  -- デバッグログの出力
+  -- Enable debug logging
   debug = false,
 
-  -- リモートアクセスの設定
-  remote = nil,  -- nilまたはパスワード文字列
+  -- Remote access configuration
+  remote = nil,  -- nil or password string
 
-  -- テーマの指定
+  -- Theme specification
   theme = nil,
 }
 
--- 現在の設定（ユーザー設定でオーバーライド可能）
+-- Current configuration (can be overridden by user config)
 M.options = vim.deepcopy(M.defaults)
 
--- 設定のセットアップ
--- @param user_config table|nil ユーザー提供の設定
+-- Setup configuration
+-- @param user_config table|nil User-provided configuration
 function M.setup(user_config)
   M.options = vim.tbl_deep_extend('force', M.defaults, user_config or {})
 
   if M.options.debug then
-    vim.notify('[slidev.nvim] 設定完了: ' .. vim.inspect(M.options), vim.log.levels.DEBUG)
+    vim.notify('[slidev.nvim] Configuration loaded: ' .. vim.inspect(M.options), vim.log.levels.DEBUG)
   end
 end
 
--- 現在の設定を取得
--- @return table 現在の設定
+-- Get current configuration
+-- @return table Current configuration
 function M.get()
   return M.options
 end
 
--- デバッグログの出力
--- @param message string ログメッセージ
+-- Output debug log
+-- @param message string Log message
 function M.debug_log(message)
   if M.options.debug then
     vim.notify('[slidev.nvim] ' .. message, vim.log.levels.DEBUG)

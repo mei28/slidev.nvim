@@ -2,40 +2,57 @@
 
 Neovim plugin for [Slidev](https://sli.dev/) - a presentation slides tool for developers.
 
-このプラグインにより、NeovimからSlidevのCLI機能を直接利用できます。VSCodeなど別のエディタに切り替えることなく、Neovimでプレゼンテーション開発を完結できます。
+This plugin allows you to use Slidev CLI features directly from Neovim, enabling you to create presentations without switching to other editors like VSCode.
 
 ## Features
 
-- 開発サーバーの起動とライブプレビュー
-- 複数形式でのエクスポート（PDF, PNG, PPTX, Markdown）
-- 本番用ビルド（SPA）
-- マークダウンフォーマット
-- バッファクローズ時の自動クリーンアップ
-- クロスプラットフォーム対応（macOS, Linux, Windows）
+- Launch dev server with live preview
+- Export to multiple formats (PDF, PNG, PPTX, Markdown)
+- Production build (SPA)
+- Markdown formatting
+- Auto cleanup on buffer close
+- Cross-platform support (macOS, Linux, Windows)
 
 ## Requirements
 
 - Neovim 0.7+
-- Node.js と npm（Slidev CLIのインストールに必要）
-- Slidev CLI（推奨：グローバルインストール）
+- Node.js and npm (required for Slidev CLI)
+- Slidev CLI (recommended: global installation)
 
-### Slidev CLIのインストール
+### Installing Slidev CLI
 
 ```bash
-# グローバルインストール（推奨）
+# Global installation (recommended)
 npm install -g @slidev/cli
 
-# または各プロジェクトでローカルインストール
+# Or local installation per project
 npm install -D @slidev/cli
 
-# npxで自動実行も可能（インストール不要）
+# Can also use npx without installation
 ```
 
-プラグインは以下の優先順位でSlidev CLIを検出します：
-1. 設定で指定されたコマンド
-2. グローバルインストール（PATH から検出）
-3. ローカルインストール（`node_modules/.bin/slidev`）
-4. npx で自動実行（`@slidev/cli@latest`）
+### For Export Functionality
+
+PDF/PNG/PPTX export requires Playwright:
+
+```bash
+# For global Slidev installation
+npm install -g playwright-chromium
+
+# For local installation
+npm install -D playwright-chromium
+```
+
+**Alternative**: Browser Export
+1. Start server with `:SlidevPreview`
+2. Navigate to `http://localhost:3030/export` in browser
+3. Use browser's print function to save as PDF
+
+The plugin detects Slidev CLI in the following priority:
+1. Command specified in config
+2. Global installation (detected from PATH)
+3. Local installation (`node_modules/.bin/slidev`)
+4. Auto-run with npx (`@slidev/cli@latest`)
 
 ## Installation
 
@@ -43,10 +60,10 @@ npm install -D @slidev/cli
 
 ```lua
 {
-  'mei/slidev.nvim',
+  'mei28/slidev.nvim',
   config = function()
     require('slidev').setup({
-      -- オプション設定（デフォルト値）
+      -- Optional configuration (default values)
       port = 3030,
       auto_open_browser = true,
       debug = false,
@@ -59,7 +76,7 @@ npm install -D @slidev/cli
 
 ```lua
 use {
-  'mei/slidev.nvim',
+  'mei28/slidev.nvim',
   config = function()
     require('slidev').setup()
   end
@@ -69,7 +86,7 @@ use {
 ### vim-plug
 
 ```vim
-Plug 'mei/slidev.nvim'
+Plug 'mei28/slidev.nvim'
 
 lua << EOF
 require('slidev').setup()
@@ -80,59 +97,60 @@ EOF
 
 ### Commands
 
-| コマンド | 説明 |
-|---------|------|
-| `:SlidevPreview` | 開発サーバーを起動してブラウザでプレビュー |
-| `:SlidevWatch` | `SlidevPreview` のエイリアス |
-| `:SlidevStop` | 現在のバッファのサーバーを停止 |
-| `:SlidevStopAll` | すべてのサーバーを停止 |
-| `:SlidevExport [format]` | エクスポート（デフォルト: pdf） |
-| `:SlidevBuild` | 本番用にビルド |
-| `:SlidevFormat` | マークダウンをフォーマット |
-| `:SlidevStatus` | サーバーの状態を確認 |
+| Command | Description |
+|---------|-------------|
+| `:SlidevPreview` | Start dev server and open in browser |
+| `:SlidevWatch` | Alias for `SlidevPreview` |
+| `:SlidevStop` | Stop server for current buffer |
+| `:SlidevStopAll` | Stop all servers |
+| `:SlidevExport [format]` | Export (default: pdf) |
+| `:SlidevBuild` | Build for production |
+| `:SlidevFormat` | Format markdown |
+| `:SlidevStatus` | Show detailed server status (all buffers) |
 
 ### Basic Workflow
 
-1. Slidevマークダウンファイルを開く：
+1. Open a Slidev markdown file:
    ```vim
    :e slides.md
    ```
 
-2. プレビューを開始：
+2. Start preview:
    ```vim
    :SlidevPreview
    ```
 
-3. 編集しながらライブリロードで確認
+3. Edit with live reload
 
-4. エクスポート：
+4. Export:
    ```vim
    :SlidevExport pdf
+   " Output: <filename>-export.pdf (same directory as source file)
    ```
 
 ### Configuration
 
 ```lua
 require('slidev').setup({
-  -- Slidev CLIコマンドのパス（nilの場合は自動検出）
+  -- Path to Slidev CLI command (nil for auto-detect)
   slidev_command = nil,
 
-  -- 開発サーバーのデフォルトポート
+  -- Default port for dev server
   port = 3030,
 
-  -- ブラウザ自動起動の有効化
+  -- Enable automatic browser opening
   auto_open_browser = true,
 
-  -- 使用するブラウザ（nilの場合はシステムデフォルト）
+  -- Browser to use (nil for system default)
   browser = nil,
 
-  -- デバッグログの出力
+  -- Enable debug logging
   debug = false,
 
-  -- リモートアクセスの設定
-  remote = nil,  -- nilまたはパスワード文字列
+  -- Remote access configuration
+  remote = nil,  -- nil or password string
 
-  -- テーマの指定
+  -- Theme specification
   theme = nil,
 })
 ```
@@ -142,30 +160,38 @@ require('slidev').setup({
 ```lua
 local slidev = require('slidev')
 
--- プレビュー
+-- Preview
 slidev.preview()
 
--- カスタムポートでプレビュー
+-- Preview with custom port
 slidev.preview({ port = 8080 })
 
--- サーバー停止
+-- Stop server
 slidev.stop()
 
--- すべてのサーバー停止
+-- Stop all servers
 slidev.stop_all()
 
--- エクスポート
+-- Export
 slidev.export('pdf')
 slidev.export('png', { dark = true, range = '1-5' })
 
--- ビルド
+-- Custom output path
+slidev.export('pdf', { output = '/path/to/output.pdf' })
+slidev.export('pdf', { output = 'my-slides.pdf' })  -- relative path
+
+-- Build
 slidev.build()
 slidev.build({ out = 'build', download = true })
 
--- フォーマット
+-- Custom output directory
+slidev.build({ output = '/path/to/dist' })
+slidev.build({ output = 'public' })  -- relative path
+
+-- Format
 slidev.format()
 
--- サーバーの状態確認
+-- Check server status
 if slidev.is_running() then
   print('Server is running')
 end
@@ -173,63 +199,63 @@ end
 
 ## How It Works
 
-slidev.nvimは、marp.nvimのアーキテクチャを参考に以下のアプローチで実装されています：
+slidev.nvim is implemented with an architecture inspired by marp.nvim:
 
-1. **CLI検出**: ローカルの `node_modules/.bin/slidev` を優先し、なければ `npx slidev@latest` にフォールバック
-2. **プロセス管理**: `vim.fn.jobstart()` でSlidev CLIプロセスを起動
-3. **自動クリーンアップ**: バッファクローズ時に自動的にサーバーを停止
-4. **ブラウザ統合**: クロスプラットフォーム対応のブラウザ起動
+1. **CLI Detection**: Prioritizes local `node_modules/.bin/slidev`, falls back to `npx @slidev/cli@latest`
+2. **Process Management**: Launches Slidev CLI processes using `vim.fn.jobstart()`
+3. **Auto Cleanup**: Automatically stops servers when buffers are closed
+4. **Browser Integration**: Cross-platform browser launching
 
 ## Comparison with marp.nvim
 
-slidev.nvimは、marp.nvimと同様のコンセプトで、Slidevに特化した機能を提供します：
+slidev.nvim provides Slidev-specific features with a similar concept to marp.nvim:
 
-**共通点:**
-- ライブプレビュー機能
-- エクスポート機能
-- バッファクローズ時の自動クリーンアップ
+**Common Features:**
+- Live preview
+- Export functionality
+- Auto cleanup on buffer close
 
-**slidev.nvim固有の機能:**
-- Vueコンポーネントのサポート
-- アニメーション・トランジション
-- スライドノート機能
-- リモートプレゼンテーション（`--remote`）
-- より豊富なエクスポート形式（PPTX含む）
+**slidev.nvim Specific Features:**
+- Vue component support
+- Animations and transitions
+- Speaker notes
+- Remote presentation (`--remote`)
+- More export formats (including PPTX)
 
 ## Troubleshooting
 
-### サーバーが起動しない
+### Server Won't Start
 
-1. Slidev CLIがインストールされているか確認：
+1. Verify Slidev CLI is installed:
    ```bash
-   npx slidev@latest --version
+   npx @slidev/cli@latest --version
    ```
 
-2. デバッグモードを有効化：
+2. Enable debug mode:
    ```lua
    require('slidev').setup({ debug = true })
    ```
 
-3. Neovimのメッセージを確認：
+3. Check Neovim messages:
    ```vim
    :messages
    ```
 
-### ポートが既に使用されている
+### Port Already in Use
 
-別のポート番号を指定：
+Specify a different port:
 ```vim
 :lua require('slidev').preview({ port = 8080 })
 ```
 
-または設定でデフォルトポートを変更：
+Or change default port in config:
 ```lua
 require('slidev').setup({ port = 8080 })
 ```
 
 ## Contributing
 
-Issue報告やPull Requestを歓迎します。
+Issues and Pull Requests are welcome.
 
 ## License
 
@@ -237,4 +263,4 @@ MIT
 
 ## Acknowledgments
 
-このプラグインは、[marp.nvim](https://github.com/nwiizo/marp.nvim) を参考に実装されました。
+This plugin was inspired by [marp.nvim](https://github.com/nwiizo/marp.nvim).

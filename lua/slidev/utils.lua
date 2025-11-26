@@ -1,58 +1,58 @@
--- utils.lua: ユーティリティ関数
+-- utils.lua: Utility functions
 
 local config = require('slidev.config')
 
 local M = {}
 
--- Slidev CLIコマンドの検出
--- 優先順位: 設定 > グローバル > ローカル > npx
--- @return string Slidev CLIコマンドのパス
+-- Detect Slidev CLI command
+-- Priority: config > global > local > npx
+-- @return string Path to Slidev CLI command
 function M.find_slidev_command()
-  -- 設定で明示的に指定されている場合はそれを使用
+  -- Use explicitly specified command from config
   local cfg = config.get()
   if cfg.slidev_command then
-    config.debug_log('設定から Slidev コマンドを使用: ' .. cfg.slidev_command)
+    config.debug_log('Using Slidev command from config: ' .. cfg.slidev_command)
     return cfg.slidev_command
   end
 
-  -- グローバルインストールされたslidevを検索（PATHから）
+  -- Search for globally installed slidev (from PATH)
   local global_slidev = vim.fn.exepath('slidev')
   if global_slidev ~= '' then
-    config.debug_log('グローバル Slidev を検出: ' .. global_slidev)
+    config.debug_log('Detected global Slidev: ' .. global_slidev)
     return global_slidev
   end
 
-  -- ローカルの node_modules/.bin/slidev を検索
+  -- Search for local node_modules/.bin/slidev
   local local_slidev = vim.fn.findfile('node_modules/.bin/slidev', '.;')
   if local_slidev ~= '' then
     local full_path = vim.fn.fnamemodify(local_slidev, ':p')
-    config.debug_log('ローカル Slidev を検出: ' .. full_path)
+    config.debug_log('Detected local Slidev: ' .. full_path)
     return full_path
   end
 
-  -- フォールバック: npx を使用（正しいパッケージ名 @slidev/cli）
-  config.debug_log('npx @slidev/cli@latest を使用')
+  -- Fallback: use npx (correct package name @slidev/cli)
+  config.debug_log('Using npx @slidev/cli@latest')
   return 'npx @slidev/cli@latest'
 end
 
--- URLをブラウザで開く（クロスプラットフォーム対応）
--- @param url string 開くURL
+-- Open URL in browser (cross-platform)
+-- @param url string URL to open
 function M.open_browser(url)
   local cfg = config.get()
 
   if not cfg.auto_open_browser then
-    config.debug_log('auto_open_browser が無効のため、ブラウザを開きません')
+    config.debug_log('auto_open_browser is disabled, not opening browser')
     return
   end
 
   local cmd
   local browser = cfg.browser
 
-  -- ブラウザが指定されている場合
+  -- Use specified browser if configured
   if browser then
     cmd = browser .. ' ' .. vim.fn.shellescape(url)
   else
-    -- システムデフォルトブラウザを使用
+    -- Use system default browser
     if vim.fn.has('mac') == 1 then
       cmd = 'open ' .. vim.fn.shellescape(url)
     elseif vim.fn.has('unix') == 1 then
@@ -60,28 +60,28 @@ function M.open_browser(url)
     elseif vim.fn.has('win32') == 1 then
       cmd = 'start ' .. vim.fn.shellescape(url)
     else
-      vim.notify('[slidev.nvim] サポートされていないプラットフォームです', vim.log.levels.WARN)
+      vim.notify('[slidev.nvim] Unsupported platform', vim.log.levels.WARN)
       return
     end
   end
 
-  config.debug_log('ブラウザを起動: ' .. cmd)
+  config.debug_log('Launching browser: ' .. cmd)
   vim.fn.system(cmd)
 end
 
--- 現在のバッファのファイルパスを取得
--- @return string|nil ファイルパス（存在しない場合はnil）
+-- Get current buffer's file path
+-- @return string|nil File path (nil if not available)
 function M.get_current_file()
   local filepath = vim.fn.expand('%:p')
   if filepath == '' then
-    vim.notify('[slidev.nvim] ファイルが開かれていません', vim.log.levels.ERROR)
+    vim.notify('[slidev.nvim] No file is open', vim.log.levels.ERROR)
     return nil
   end
   return filepath
 end
 
--- 現在のバッファのディレクトリパスを取得
--- @return string|nil ディレクトリパス（存在しない場合はnil）
+-- Get current buffer's directory path
+-- @return string|nil Directory path (nil if not available)
 function M.get_current_dir()
   local filepath = M.get_current_file()
   if not filepath then
@@ -90,17 +90,17 @@ function M.get_current_dir()
   return vim.fn.fnamemodify(filepath, ':h')
 end
 
--- ANSIエスケープシーケンスを削除
--- @param str string 入力文字列
--- @return string エスケープシーケンスを削除した文字列
+-- Remove ANSI escape sequences
+-- @param str string Input string
+-- @return string String with escape sequences removed
 function M.strip_ansi_codes(str)
-  -- ANSI エスケープシーケンスのパターンをマッチして削除
+  -- Match and remove ANSI escape sequence patterns
   return str:gsub('\27%[[0-9;]*m', '')
 end
 
--- ポート番号が使用可能かチェック
--- @param port number ポート番号
--- @return boolean 使用可能な場合はtrue
+-- Check if port is available
+-- @param port number Port number
+-- @return boolean true if port is available
 function M.is_port_available(port)
   local handle = io.popen('lsof -i:' .. port .. ' 2>/dev/null')
   if not handle then
