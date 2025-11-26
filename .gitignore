@@ -1,0 +1,24 @@
+# Temporary files
+.tmp/
+
+# Slidev output
+dist/
+.slidev/
+*.pdf
+*.pptx
+*.png
+
+# Node modules (if installed locally)
+node_modules/
+
+# macOS
+.DS_Store
+
+# Vim/Neovim
+*.swp
+*.swo
+*~
+
+# Editor directories
+.vscode/
+.idea/
