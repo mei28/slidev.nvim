@@ -47,7 +47,8 @@ function M.build(opts)
   local cmd = slidev_cmd .. ' ' .. table.concat(args, ' ')
 
   config.debug_log('Build command: ' .. cmd)
-  vim.notify('[slidev.nvim] Building...', vim.log.levels.INFO)
+  -- Show build progress in command line instead of notification
+  vim.api.nvim_echo({{'[slidev.nvim] Building...', 'Normal'}}, false, {})
 
   -- Start process
   local output_lines = {}

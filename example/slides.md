@@ -14,7 +14,7 @@ title: Welcome to slidev.nvim
 mdc: true
 ---
 
-# Welcome to slidev.nvim
+# Welcome to slidev.nvim 
 
 Neovim plugin for Slidev
 

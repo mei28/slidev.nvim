@@ -206,22 +206,6 @@ slidev.nvim is implemented with an architecture inspired by marp.nvim:
 3. **Auto Cleanup**: Automatically stops servers when buffers are closed
 4. **Browser Integration**: Cross-platform browser launching
 
-## Comparison with marp.nvim
-
-slidev.nvim provides Slidev-specific features with a similar concept to marp.nvim:
-
-**Common Features:**
-- Live preview
-- Export functionality
-- Auto cleanup on buffer close
-
-**slidev.nvim Specific Features:**
-- Vue component support
-- Animations and transitions
-- Speaker notes
-- Remote presentation (`--remote`)
-- More export formats (including PPTX)
-
 ## Troubleshooting
 
 ### Server Won't Start

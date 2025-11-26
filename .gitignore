@@ -22,3 +22,4 @@ node_modules/
 # Editor directories
 .vscode/
 .idea/
+.claude

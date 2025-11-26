@@ -80,7 +80,8 @@ function M.format(opts)
   local cmd = slidev_cmd .. ' format ' .. vim.fn.shellescape(filepath)
 
   config.debug_log('Format command: ' .. cmd)
-  vim.notify('[slidev.nvim] Formatting...', vim.log.levels.INFO)
+  -- Show format progress in command line instead of notification
+  vim.api.nvim_echo({{'[slidev.nvim] Formatting...', 'Normal'}}, false, {})
 
   vim.fn.jobstart(cmd, {
     on_exit = function(_, exit_code, _)

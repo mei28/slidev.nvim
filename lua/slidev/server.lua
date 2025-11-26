@@ -8,6 +8,9 @@ local M = {}
 -- Mapping: buffer number -> job_id
 M.jobs = {}
 
+-- Flag to prevent duplicate ready notifications
+M.server_ready_notified = false
+
 -- Start Slidev dev server
 -- @param bufnr number Buffer number
 -- @param opts table|nil Options (port, open, remote, theme, etc.)
@@ -74,7 +77,6 @@ function M.start_server(bufnr, opts)
   local full_cmd = table.concat(cmd_parts, ' ')
 
   config.debug_log('Server start command: ' .. full_cmd)
-  vim.notify('[slidev.nvim] Starting Slidev server...', vim.log.levels.INFO)
 
   -- Collect error messages
   local output_lines = {}
@@ -98,7 +100,16 @@ function M.start_server(bufnr, opts)
 
             -- Detect server startup completion
             if clean_line:match('Local:') or clean_line:match('localhost:' .. port) then
-              vim.notify('[slidev.nvim] Server started: http://localhost:' .. port, vim.log.levels.INFO)
+              -- Only notify once when server is ready
+              if not M.server_ready_notified then
+                vim.notify('[slidev.nvim] Server ready at http://localhost:' .. port, vim.log.levels.INFO)
+                M.server_ready_notified = true
+
+                -- Reset flag after a short delay for next server start
+                vim.defer_fn(function()
+                  M.server_ready_notified = false
+                end, 1000)
+              end
 
               -- Open browser (if --open option is not set)
               if not (opts.open or cfg.auto_open_browser) then
@@ -140,9 +151,8 @@ function M.start_server(bufnr, opts)
           error_msg = error_msg .. '\n\nCommand: ' .. full_cmd .. '\nOutput:\n' .. table.concat(output_lines, '\n')
         end
         vim.notify(error_msg, vim.log.levels.ERROR)
-      else
-        vim.notify('[slidev.nvim] Server stopped', vim.log.levels.INFO)
       end
+      -- Don't notify on normal exit (user explicitly stopped or closed buffer)
     end,
   })
 
@@ -153,7 +163,6 @@ function M.start_server(bufnr, opts)
 
   M.jobs[bufnr] = job_id
   config.debug_log('Registered job_id=' .. job_id .. ' for buffer ' .. bufnr)
-  vim.notify('[slidev.nvim] Server started with job_id=' .. job_id, vim.log.levels.INFO)
 
   -- Auto-stop on buffer close (multiple events for reliability)
   local augroup = vim.api.nvim_create_augroup('SlidevServer_' .. bufnr, { clear = true })
@@ -202,7 +211,11 @@ function M.stop_server(bufnr)
   config.debug_log('Stopping server: bufnr=' .. bufnr .. ', job_id=' .. job_id)
   vim.fn.jobstop(job_id)
   M.jobs[bufnr] = nil
-  vim.notify('[slidev.nvim] Server stopped (bufnr=' .. bufnr .. ', job_id=' .. job_id .. ')', vim.log.levels.INFO)
+
+  -- Only notify in debug mode or when explicitly stopping
+  if config.get().debug then
+    vim.notify('[slidev.nvim] Server stopped (bufnr=' .. bufnr .. ', job_id=' .. job_id .. ')', vim.log.levels.INFO)
+  end
 end
 
 -- Stop all Slidev dev servers

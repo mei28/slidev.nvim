@@ -73,7 +73,8 @@ function M.export(format, opts)
   local cmd = slidev_cmd .. ' ' .. table.concat(args, ' ')
 
   config.debug_log('Export command: ' .. cmd)
-  vim.notify('[slidev.nvim] Exporting to ' .. format:upper() .. '...', vim.log.levels.INFO)
+  -- Show export progress in command line instead of notification
+  vim.api.nvim_echo({{('[slidev.nvim] Exporting to %s...'):format(format:upper()), 'Normal'}}, false, {})
 
   -- Start process
   local output_lines = {}
