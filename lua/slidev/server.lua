@@ -11,6 +11,9 @@ M.jobs = {}
 -- Flag to prevent duplicate ready notifications
 M.server_ready_notified = false
 
+-- Track user-initiated stops to suppress error notifications
+M.user_stopped = {}
+
 -- Start Slidev dev server
 -- @param bufnr number Buffer number
 -- @param opts table|nil Options (port, open, remote, theme, etc.)
@@ -142,17 +145,29 @@ function M.start_server(bufnr, opts)
 
     on_exit = function(_, exit_code, _)
       config.debug_log('Process exited: exit_code=' .. exit_code)
+      local was_user_stopped = M.user_stopped[bufnr]
       M.jobs[bufnr] = nil
+      M.user_stopped[bufnr] = nil
 
-      if exit_code ~= 0 and exit_code ~= 143 then  -- 143 = SIGTERM
-        -- Display error output
+      -- Don't show error if user explicitly stopped the server
+      if was_user_stopped then
+        config.debug_log('Server stopped by user, exit_code=' .. exit_code)
+        return
+      end
+
+      -- Common exit codes for normal shutdown:
+      -- 0 = normal exit
+      -- 129 = SIGHUP (sent by 'q' command)
+      -- 130 = SIGINT (Ctrl+C)
+      -- 143 = SIGTERM (jobstop)
+      if exit_code ~= 0 and exit_code ~= 129 and exit_code ~= 130 and exit_code ~= 143 then
+        -- Display error output for abnormal exits
         local error_msg = '[slidev.nvim] Server exited abnormally: exit_code=' .. exit_code
         if #output_lines > 0 then
           error_msg = error_msg .. '\n\nCommand: ' .. full_cmd .. '\nOutput:\n' .. table.concat(output_lines, '\n')
         end
         vim.notify(error_msg, vim.log.levels.ERROR)
       end
-      -- Don't notify on normal exit (user explicitly stopped or closed buffer)
     end,
   })
 
@@ -175,9 +190,27 @@ function M.start_server(bufnr, opts)
       config.debug_log('Buffer event: ' .. ev.event .. ' (bufnr=' .. bufnr .. ')')
       if M.jobs[bufnr] then
         config.debug_log('Stopping server on buffer close: bufnr=' .. bufnr)
-        vim.fn.jobstop(M.jobs[bufnr])
-        M.jobs[bufnr] = nil
-        -- Don't notify when stopped from autocmd (debug log only)
+        local jid = M.jobs[bufnr]
+
+        -- Mark as user-stopped to suppress error notifications
+        M.user_stopped[bufnr] = true
+
+        -- Try graceful shutdown first
+        local success = pcall(vim.fn.chansend, jid, 'q\n')
+
+        if success then
+          -- Wait briefly, then force kill if needed
+          vim.defer_fn(function()
+            if vim.fn.jobwait({jid}, 0)[1] == -1 then
+              config.debug_log('Forcing stop after buffer close: job_id=' .. jid)
+              vim.fn.jobstop(jid)
+            end
+          end, 1000)  -- Shorter timeout for buffer close
+        else
+          vim.fn.jobstop(jid)
+        end
+
+        -- Note: M.jobs[bufnr] and M.user_stopped[bufnr] will be cleaned up in on_exit
         config.debug_log('Server auto-stopped: bufnr=' .. bufnr)
       end
     end,
@@ -209,8 +242,30 @@ function M.stop_server(bufnr)
   end
 
   config.debug_log('Stopping server: bufnr=' .. bufnr .. ', job_id=' .. job_id)
-  vim.fn.jobstop(job_id)
-  M.jobs[bufnr] = nil
+
+  -- Mark as user-stopped to suppress error notifications
+  M.user_stopped[bufnr] = true
+
+  -- Try graceful shutdown first by sending 'q' (quit shortcut)
+  local success = pcall(vim.fn.chansend, job_id, 'q\n')
+
+  if success then
+    config.debug_log('Sent quit command to job_id=' .. job_id)
+
+    -- Wait for graceful shutdown, then force kill if needed
+    vim.defer_fn(function()
+      if vim.fn.jobwait({job_id}, 0)[1] == -1 then
+        config.debug_log('Job still running after quit command, forcing stop: job_id=' .. job_id)
+        vim.fn.jobstop(job_id)
+      end
+    end, 2000)  -- Wait 2 seconds for graceful shutdown
+  else
+    -- If sending quit fails, fall back to jobstop
+    config.debug_log('Failed to send quit command, using jobstop: job_id=' .. job_id)
+    vim.fn.jobstop(job_id)
+  end
+
+  -- Note: M.jobs[bufnr] and M.user_stopped[bufnr] will be cleaned up in on_exit
 
   -- Only notify in debug mode or when explicitly stopping
   if config.get().debug then
@@ -223,11 +278,32 @@ function M.stop_all_servers()
   local count = 0
   for bufnr, job_id in pairs(M.jobs) do
     config.debug_log('Stopping server: bufnr=' .. bufnr .. ', job_id=' .. job_id)
-    vim.fn.jobstop(job_id)
+
+    -- Mark as user-stopped to suppress error notifications
+    M.user_stopped[bufnr] = true
+
+    -- Try graceful shutdown first by sending 'q' (quit shortcut)
+    local success = pcall(vim.fn.chansend, job_id, 'q\n')
+
+    if not success then
+      -- If sending quit fails, fall back to jobstop
+      config.debug_log('Failed to send quit command, using jobstop: job_id=' .. job_id)
+      vim.fn.jobstop(job_id)
+    end
+
     count = count + 1
   end
 
-  M.jobs = {}
+  -- Wait for graceful shutdown, then force kill any remaining
+  vim.defer_fn(function()
+    for _, job_id in pairs(M.jobs) do
+      if vim.fn.jobwait({job_id}, 0)[1] == -1 then
+        config.debug_log('Job still running after quit command, forcing stop: job_id=' .. job_id)
+        vim.fn.jobstop(job_id)
+      end
+    end
+    -- Note: M.jobs and M.user_stopped will be cleaned up in on_exit callbacks
+  end, 2000)
 
   if count > 0 then
     vim.notify('[slidev.nvim] Stopped ' .. count .. ' server(s)', vim.log.levels.INFO)
